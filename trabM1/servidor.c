@@ -27,6 +27,7 @@ void* tratar_requisicao(void* arg) {
     // Comparando a string recebida
     if (strncmp(comando, "INSERT", 6) == 0) {
         printf("[THREAD] Executando lógica de INSERÇÃO...\n");
+        
         //aqui vão ser postas as funções de cada coisinha
     } 
     else if (strncmp(comando, "DELETE", 6) == 0) {
@@ -35,17 +36,16 @@ void* tratar_requisicao(void* arg) {
     else if (strncmp(comando, "SELECT", 6) == 0) {
         printf("[THREAD] Executando lógica de BUSCA...\n");
     }
+    else if (strncmp(comando, "UPDATE", 6) == 0) {
+        printf("[THREAD] Executando lógica de ALTERAÇÃO...\n");
+    }
     else {
         printf("[THREAD] Comando não reconhecido: %s\n", comando);
     }
     
-    // Simulando um tempo de processamento no banco
-    sleep(2); 
-    
     printf("[THREAD] Processamento finalizado.\n");
     
     pthread_mutex_unlock(&trava_banco);
-    // --- FIM DA ZONA CRÍTICA ---
 
     free(comando); // Libera a memória alocada no main
     return NULL;
@@ -56,7 +56,7 @@ int main() {
     char buffer[BUFFER_SIZE];
 
     // 1. Cria o Named Pipe (FIFO)
-    // Se o arquivo já existir, ele não dá erro por causa da verificação
+    //se o arquivo já existir, ele não dá erro por causa da verificação
     mkfifo(PIPE_NAME, 0666);
 
     printf("=== SERVIDOR DE BANCO DE DADOS INICIALIZADO ===\n");
@@ -65,7 +65,7 @@ int main() {
     //while(1) deixa ele sempre rodando
     while (1) {
         // 2. Abre o pipe para leitura
-        // O servidor para aqui até que um cliente escreva algo
+        //o servidor para aqui até que um cliente escreva algo
         fd = open(PIPE_NAME, O_RDONLY);
         
         //se ele recebe algo, executa
@@ -84,12 +84,12 @@ int main() {
             if (pthread_create(&tid, NULL, tratar_requisicao, (void*)comando_para_thread) != 0) {
                 perror("Erro ao criar thread");
             } else {
-                // Detach permite que a thread se limpe sozinha ao terminar
+                //detach permite que a thread se limpe sozinha ao terminar
                 pthread_detach(tid);
             }
         }
 
-        close(fd); // Fecha o descritor para a próxima leitura
+        close(fd); //fecha o descritor para a próxima leitura
     }
 
     return 0;

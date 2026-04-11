@@ -6,9 +6,7 @@
 Neste trabalho construimos um 'servidor' que recebe requisições em estilo sql simples e executa em banco.txt e/ou no terminal (SELECT).
 Para executar este trabalho é necessário um sistema Linux/Unix like (pode ser executado no codespaces)
 
-#### Compilar e executar:
-
-- Compilando
+#### Compilar
 
 ```shell
     cd ./trabM1
@@ -16,16 +14,16 @@ Para executar este trabalho é necessário um sistema Linux/Unix like (pode ser 
     gcc ./cliente.c -o cliente.out
 ```
 
-- Executando
+#### Executar
 
-    - Primeiro Bash
-
- ```shell
-            ./servidor.out
-```
-
-    - Segundo Bash
+- Primeiro Bash
 
 ```shell
-            ./servidor.out
+    ./servidor.out
+```
+
+- Segundo Bash
+
+```shell
+    ./servidor.out
 ```

@@ -1,96 +1,125 @@
-//Aqui é a nossa cabeça pensante, é quem recebe o dado via pipe
-//e executa o registro/deleção/atualização no nosso arquivinho .txt
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <fcntl.h>
-#include <sys/stat.h>  //sys/ -> bibliotecas do so
+#include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
 #include <pthread.h>
-#include "banco.h"     //nossa biblioteca com os defines
+#include "banco.h"
 
-// Mutex global para controlar o acesso ao "banco"
+// --- Infraestrutura da Fila ---
+Tarefa fila_tarefas[MAX_FILA];
+int contador_tarefas = 0;
+pthread_mutex_t mutex_fila = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t cond_fila = PTHREAD_COND_INITIALIZER;
+
+// Mutex para o Banco (Arquivo)
 pthread_mutex_t trava_banco = PTHREAD_MUTEX_INITIALIZER;
 
-// Função que cada thread executa, vai descobrir oq queremos fazer tbm (ex. INCLUDE)
-void* tratar_requisicao(void* arg) {
-    char* comando = (char*)arg;
+TipoOperacao identificar_comando(char* comando_bruto) {
+    char cmd[20];
+    if (sscanf(comando_bruto, "%s", cmd) <= 0) return OP_INVALIDA;
 
-    // --- ZONA CRÍTICA --- (chamam assim pq mexe com o banco direto)
-    pthread_mutex_lock(&trava_banco);
+    if (strcmp(cmd, "INSERT") == 0) return OP_INSERT;
+    if (strcmp(cmd, "DELETE") == 0) return OP_DELETE;
+    if (strcmp(cmd, "UPDATE") == 0) return OP_UPDATE;
+    if (strcmp(cmd, "SELECT") == 0) return OP_SELECT;
     
-    printf("\n[THREAD] Iniciando processamento...\n");
-    printf("[THREAD] Comando recebido: %s\n", comando);
+    return OP_INVALIDA;
+}
 
-    // Comparando a string recebida
-    if (strncmp(comando, "INSERT", 6) == 0) {
-        printf("[THREAD] Executando lógica de INSERÇÃO...\n");
+void* worker_thread(void* arg) {
+    while (1) {
+        Tarefa tarefa_local;
+
+        // 1. ESPERA POR TRABALHO (USANDO O MUTEX DA FILA)
+        pthread_mutex_lock(&mutex_fila);
+        while (contador_tarefas == 0) {
+            pthread_cond_wait(&cond_fila, &mutex_fila);
+        }
+
+        // Retira da fila (sempre o primeiro da fila)
+        tarefa_local = fila_tarefas[0];
+        for (int i = 0; i < contador_tarefas - 1; i++) {
+            fila_tarefas[i] = fila_tarefas[i + 1];
+        }
+        contador_tarefas--;
+        pthread_mutex_unlock(&mutex_fila);
+
+        // 2. PROCESSAMENTO
+        TipoOperacao op = identificar_comando(tarefa_local.comando_bruto);
+        char *saveptr;
+        strtok_r(tarefa_local.comando_bruto, " ", &saveptr); // Pula o comando
+
+        pthread_mutex_lock(&trava_banco); // Trava o arquivo
         
-        //aqui vão ser postas as funções de cada coisinha
-    } 
-    else if (strncmp(comando, "DELETE", 6) == 0) {
-        printf("[THREAD] Executando lógica de REMOÇÃO...\n");
-    }
-    else if (strncmp(comando, "SELECT", 6) == 0) {
-        printf("[THREAD] Executando lógica de BUSCA...\n");
-    }
-    else if (strncmp(comando, "UPDATE", 6) == 0) {
-        printf("[THREAD] Executando lógica de ALTERAÇÃO...\n");
-    }
-    else {
-        printf("[THREAD] Comando não reconhecido: %s\n", comando);
-    }
-    
-    printf("[THREAD] Processamento finalizado.\n");
-    
-    pthread_mutex_unlock(&trava_banco);
+        switch (op) {
+            case OP_INSERT: {
+                char *id_s = strtok_r(NULL, " ", &saveptr);
+                char *nome = strtok_r(NULL, " ", &saveptr);
+                printf("[THREAD] Inserindo ID %s Nome %s\n", id_s, nome);
+                // chamar_funcao_insert(atoi(id_s), nome);
+                break;
+            }
+            case OP_DELETE: {
+                char *id_s = strtok_r(NULL, " ", &saveptr);
+                printf("[THREAD] Removendo ID %s\n", id_s);
+                // chamar_funcao_delete(atoi(id_s), nome);
+                break;
+            }
+            case OP_UPDATE: {
+                char *id_s = strtok_r(NULL, " ", &saveptr);
+                char *nome = strtok_r(NULL, " ", &saveptr);
+                printf("[THREAD] Atualizando ID %s para Nome %s\n", id_s, nome);
+                // chamar_funcao_update(atoi(id_s), nome);
+                break;
+            }
+            case OP_SELECT: {
+                char *param = strtok_r(NULL, " ", &saveptr);
+                printf("[THREAD] Selecionando: %s\n", param);
+                // chamar_funcao_select(atoi(id_s), nome);
+                break;
+            }
+            default:
+                printf("[THREAD] Comando inválido.\n");
+        }
 
-    free(comando); // Libera a memória alocada no main
+        pthread_mutex_unlock(&trava_banco); // Libera o arquivo
+    }
     return NULL;
 }
 
 int main() {
-    int fd; //file descriptor: numero para a thread
+    int fd;
     char buffer[BUFFER_SIZE];
+    pthread_t pool[NUM_THREADS];
 
-    // 1. Cria o Named Pipe (FIFO)
-    //se o arquivo já existir, ele não dá erro por causa da verificação
     mkfifo(PIPE_NAME, 0666);
 
-    printf("=== SERVIDOR DE BANCO DE DADOS INICIALIZADO ===\n");
-    printf("Aguardando comandos via Pipe: %s\n", PIPE_NAME); //trecho fofo pra mostrar o caminho do pipe
-
-    //while(1) deixa ele sempre rodando
-    while (1) {
-        // 2. Abre o pipe para leitura
-        //o servidor para aqui até que um cliente escreva algo
-        fd = open(PIPE_NAME, O_RDONLY);
-        
-        //se ele recebe algo, executa
-        if (read(fd, buffer, BUFFER_SIZE) > 0) {
-
-            printf("\n[SERVIDOR] Dados recebidos no Pipe! Criando thread...\n");
-
-            // Remove o '\n' se houver
-            buffer[strcspn(buffer, "\n")] = 0;
-
-            // Aloca memória para passar a string para a thread com segurança
-            char* comando_para_thread = strdup(buffer);
-
-            // 3. Criação da Thread
-            pthread_t tid;
-            if (pthread_create(&tid, NULL, tratar_requisicao, (void*)comando_para_thread) != 0) {
-                perror("Erro ao criar thread");
-            } else {
-                //detach permite que a thread se limpe sozinha ao terminar
-                pthread_detach(tid);
-            }
-        }
-
-        close(fd); //fecha o descritor para a próxima leitura
+    // 3. INICIALIZA A POOL DE THREADS (ELAS JÁ FICAM ESPERANDO)
+    for (int i = 0; i < NUM_THREADS; i++) {
+        pthread_create(&pool[i], NULL, worker_thread, NULL);
     }
 
+    printf("=== SERVIDOR INICIALIZADO ===\n");
+
+    while (1) {
+        fd = open(PIPE_NAME, O_RDONLY);
+        if (read(fd, buffer, BUFFER_SIZE) > 0) {
+            buffer[strcspn(buffer, "\n")] = 0;
+
+            // 4. DEPOSITA NA FILA (PRODUTOR)
+            pthread_mutex_lock(&mutex_fila);
+            if (contador_tarefas < MAX_FILA) {
+                strncpy(fila_tarefas[contador_tarefas].comando_bruto, buffer, BUFFER_SIZE);
+                contador_tarefas++;
+                pthread_cond_signal(&cond_fila); // Acorda uma thread
+                printf("[SERVIDOR] Comando adicionado à fila.\n");
+            }
+            pthread_mutex_unlock(&mutex_fila);
+        }
+        close(fd);
+    }
     return 0;
 }

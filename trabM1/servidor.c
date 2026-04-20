@@ -9,7 +9,7 @@
 #include "banco.h"
 
 // --- Infraestrutura da Fila ---
-Tarefa fila_tarefas[MAX_FILA];
+Tarefa fila_tarefas[MAX_FILA]; //array de comandos brutos
 int contador_tarefas = 0;
 pthread_mutex_t mutex_fila = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t cond_fila = PTHREAD_COND_INITIALIZER;
@@ -17,6 +17,7 @@ pthread_cond_t cond_fila = PTHREAD_COND_INITIALIZER;
 // Mutex para o Banco (Arquivo)
 pthread_mutex_t trava_banco = PTHREAD_MUTEX_INITIALIZER;
 
+//função que identifica o comando inserido (somente a palavra chave)
 TipoOperacao identificar_comando(char* comando_bruto) {
     char cmd[20];
     if (sscanf(comando_bruto, "%s", cmd) <= 0) return OP_INVALIDA;
@@ -45,7 +46,10 @@ void* worker_thread(void* arg) {
             fila_tarefas[i] = fila_tarefas[i + 1];
         }
         contador_tarefas--;
+
         pthread_mutex_unlock(&mutex_fila);
+
+        printf("[N. %lu] recebeu um comando...\n", (unsigned long)pthread_self());
 
         // 2. PROCESSAMENTO
         TipoOperacao op = identificar_comando(tarefa_local.comando_bruto);
@@ -84,7 +88,7 @@ void* worker_thread(void* arg) {
             default:
                 printf("[THREAD] Comando inválido.\n");
         }
-
+        sleep(1);
         pthread_mutex_unlock(&trava_banco); // Libera o arquivo
     }
     return NULL;
@@ -105,21 +109,35 @@ int main() {
     printf("=== SERVIDOR INICIALIZADO ===\n");
 
     while (1) {
-        fd = open(PIPE_NAME, O_RDONLY);
-        if (read(fd, buffer, BUFFER_SIZE) > 0) {
-            buffer[strcspn(buffer, "\n")] = 0;
+        fd = open(PIPE_NAME, O_RDONLY); // O servidor trava aqui esperando o cliente
+    
+        // Agora lemos TUDO que houver no pipe até que ele seja fechado do outro lado
+        ssize_t bytes_lidos;
 
-            // 4. DEPOSITA NA FILA (PRODUTOR)
-            pthread_mutex_lock(&mutex_fila);
-            if (contador_tarefas < MAX_FILA) {
-                strncpy(fila_tarefas[contador_tarefas].comando_bruto, buffer, BUFFER_SIZE);
-                contador_tarefas++;
-                pthread_cond_signal(&cond_fila); // Acorda uma thread
-                printf("[SERVIDOR] Comando adicionado à fila.\n");
+        //deu erro de comando inválido, então agora ele limpa 
+        memset(buffer, 0, BUFFER_SIZE); // Zera o array inteiro com \0
+
+        while ((bytes_lidos = read(fd, buffer, BUFFER_SIZE)) > 0) {
+            int inicio = 0;
+            for (int i = 0; i < bytes_lidos; i++) {
+                if (buffer[i] == '\0') {
+                    char* msg_atual = &buffer[inicio];
+                
+                    // --- INSERÇÃO NA FILA ---
+                    pthread_mutex_lock(&mutex_fila);
+                    if (contador_tarefas < MAX_FILA) {
+                        strncpy(fila_tarefas[contador_tarefas].comando_bruto, msg_atual, BUFFER_SIZE);
+                        contador_tarefas++;
+                        pthread_cond_signal(&cond_fila);
+                    }
+                    else printf("[FILA] Fila cheia! Comando: %s perdido\n", msg_atual);
+                    pthread_mutex_unlock(&mutex_fila);
+
+                    inicio = i + 1;
+                }
             }
-            pthread_mutex_unlock(&mutex_fila);
         }
-        close(fd);
+        close(fd); // Só fecha depois que o read retornar 0 (cliente fechou)
     }
     return 0;
 }

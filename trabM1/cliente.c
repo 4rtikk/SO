@@ -15,13 +15,10 @@ void enviar(char *msg) {
     //envia a mensagem até o pipe correto, possui o tamanho da mensagem nele, funciona como FIFO
     write(fd, msg, strlen(msg) + 1);
     close(fd);
-    
-    // pausinha
-    sleep(2); 
 }
 
 int main() {
-    printf("=== INICIANDO CLIENTE AUTOMÁTICO (TESTE CRUD) ===\n");
+    printf("=== INICIANDO CLIENTE ===\n");
 
     // 1. Simulação de Inserção
     enviar("INSERT 10 Aluno_Univali");
@@ -33,6 +30,42 @@ int main() {
     enviar("UPDATE 10 Novo_Nome_Editado");
 
     // 4. Simulação de Deleção
+    enviar("DELETE 10");
+
+    // 5. Simulação de Inserção
+    enviar("INSERT 10 Aluno_Univali");
+
+    // 6. Simulação de Seleção (Busca)
+    enviar("SELECT 10");
+
+    // 7. Simulação de Atualização
+    enviar("UPDATE 10 Novo_Nome_Editado");
+
+    // 8. Simulação de Deleção
+    enviar("DELETE 10");
+
+    // 9. Simulação de Inserção
+    enviar("INSERT 10 Aluno_Univali");
+
+    // 10. Simulação de Seleção (Busca)
+    enviar("SELECT 10");
+
+    // 11. Simulação de Atualização
+    enviar("UPDATE 10 Novo_Nome_Editado");
+
+    // 12. Simulação de Deleção
+    enviar("DELETE 10");
+
+    // 13. Simulação de Inserção
+    enviar("INSERT 10 Aluno_Univali");
+
+    // 14. Simulação de Seleção (Busca)
+    enviar("SELECT 10");
+
+    // 15. Simulação de Atualização
+    enviar("UPDATE 10 Novo_Nome_Editado");
+
+    // 16. Simulação de Deleção
     enviar("DELETE 10");
 
     printf("=== TESTE FINALIZADO COM SUCESSO ===\n");

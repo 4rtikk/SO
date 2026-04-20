@@ -5,8 +5,8 @@
 #define BANCO_H
 
 //Configurações da pool de threads + fila de espera
-#define NUM_THREADS 4           
-#define MAX_FILA 10
+#define NUM_THREADS 4          
+#define MAX_FILA 16
 
 //Configurações do sistema
 #define PIPE_NAME "/tmp/bd_pipe"    // Caminho do Named Pipe (aquele que não vem de pai pra filho)

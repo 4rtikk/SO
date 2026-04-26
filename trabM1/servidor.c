@@ -42,24 +42,32 @@ int banco_insert(int id, const char *nome) {
     return 1;
 }
 
-int banco_select(int id, Registro *resultado) {
+int banco_select(char *parametro, Registro *resultado) {
     FILE *arquivo = fopen("banco.txt", "r");
     Registro registro;
-
+    
     if (arquivo == NULL) {
         return 0;
     }
 
+    // Tenta converter o parâmetro para número (caso seja um ID)
+    int id_buscado = atoi(parametro);
+    int encontrou = 0;
+
     while (fscanf(arquivo, "%d %49s", &registro.id, registro.nome) == 2) {
-        if (registro.id == id) {
+        // Verifica se o ID bate (se o atoi conseguiu converter algo > 0)
+        // OU se o nome bate exatamente com o parâmetro
+        if ((id_buscado > 0 && registro.id == id_buscado) || 
+            (strcmp(registro.nome, parametro) == 0)) {
+            
             *resultado = registro;
-            fclose(arquivo);
-            return 1;
+            encontrou = 1;
+            break; // Para na primeira ocorrência
         }
     }
 
     fclose(arquivo);
-    return 0;
+    return encontrou;
 }
 
 int banco_delete(int id) {
@@ -238,7 +246,7 @@ void* worker_thread(void* arg) {
                 }
 
                 Registro resultado;
-                if (banco_select(atoi(param), &resultado)) {
+                if (banco_select(param, &resultado)) {
                     printf("[THREAD] SELECT encontrou: ID %d Nome %s\n", resultado.id, resultado.nome);
                 }
                 else {
@@ -279,8 +287,7 @@ int main() {
 
           pthread_mutex_lock(&mutex_fila);
           if (contador_tarefas < MAX_FILA) {
-            strncpy(fila_tarefas[contador_tarefas].comando_bruto, buffer,
-                    BUFFER_SIZE);
+            strncpy(fila_tarefas[contador_tarefas].comando_bruto, buffer, BUFFER_SIZE);
             contador_tarefas++;
             pthread_cond_signal(&cond_fila);
           }
@@ -288,9 +295,6 @@ int main() {
           i = 0; // reset for next message
         }
       }
-
-    close(fd);
-    fd = open(PIPE_NAME, O_RDONLY);
   }
   close(fd);
 

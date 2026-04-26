@@ -21,52 +21,43 @@ int main() {
     printf("=== INICIANDO CLIENTE ===\n");
 
     // 1. Simulação de Inserção
-    enviar("INSERT 10 Aluno_Univali");
+    enviar("INSERT 101 Alice");
 
     // 2. Simulação de Seleção (Busca)
-    enviar("SELECT 10");
+    enviar("INSERT 102 Bob_Engenharia");
 
     // 3. Simulação de Atualização
-    enviar("UPDATE 10 Novo_Nome_Editado");
+    enviar("INSERT 103 Charlie_Lite");
 
     // 4. Simulação de Deleção
-    enviar("DELETE 10");
+    enviar("INSERT 104 David_Proa");
 
-    // 5. Simulação de Inserção
-    enviar("INSERT 10 Aluno_Univali");
+    // 5. Simulação de Seleção (Busca)
+    enviar("SELECT 101");
 
-    // 6. Simulação de Seleção (Busca)
-    enviar("SELECT 10");
+    // 6. Simulação de Inserção
+    enviar("SELECT 102 Bob_Engenharia");
 
-    // 7. Simulação de Atualização
-    enviar("UPDATE 10 Novo_Nome_Editado");
+    // 7. Simulação de Inserção
+    enviar("SELECT 104");
 
-    // 8. Simulação de Deleção
-    enviar("DELETE 10");
+    // 8. Simulação de Inserção
+    enviar("SELECT 103");
 
     // 9. Simulação de Inserção
-    enviar("INSERT 10 Aluno_Univali");
+    enviar("SELECT 103");
 
-    // 10. Simulação de Seleção (Busca)
-    enviar("SELECT 10");
+    // 9. Simulação de Inserção
+    enviar("SELECT Alice");
 
-    // 11. Simulação de Atualização
-    enviar("UPDATE 10 Novo_Nome_Editado");
+    // 9. Simulação de Inserção
+    enviar("SELECT Bob_Engenharia");
 
-    // 12. Simulação de Deleção
-    enviar("DELETE 10");
+    // 9. Simulação de Inserção
+    enviar("SELECT Bob");
 
-    // 13. Simulação de Inserção
-    enviar("INSERT 10 Aluno_Univali");
-
-    // 14. Simulação de Seleção (Busca)
-    enviar("SELECT 10");
-
-    // 15. Simulação de Atualização
-    enviar("UPDATE 10 Novo_Nome_Editado");
-
-    // 16. Simulação de Deleção
-    enviar("DELETE 10");
+    // 9. Simulação de Inserção
+    enviar("SELECT David_Proa");
 
     printf("=== TESTE FINALIZADO COM SUCESSO ===\n");
     return 0;

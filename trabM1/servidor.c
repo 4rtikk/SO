@@ -292,7 +292,7 @@ int main() {
             pthread_cond_signal(&cond_fila);
           }
           pthread_mutex_unlock(&mutex_fila);
-          i = 0; // reset for next message
+          i = 0; // reseta para a proxima mensagem
         }
       }
   }
